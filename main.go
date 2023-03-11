@@ -211,8 +211,74 @@ func SJFPrioritySchedule(w io.Writer, title string, processes []Process) {
 }
 
 //func SJFSchedule(w io.Writer, title string, processes []Process) { }
-//
+
 //func RRSchedule(w io.Writer, title string, processes []Process) { }
+func RRSchedule(w io.Writer, title string, processes []Process) {
+	var (
+		n = len(processes)
+		timeLeft = make([]int64, n)
+		ArrivalTime   = make([]int64, n)
+		waitingTime           = make([]int64, n)
+		turnAroundTIme        = make([]int64, n)
+		schedule              = make([][]string, len(processes))
+		currentTime     int64 = 0
+		totalTurnaround int64 = 0
+		totalWaiting    int64 = 0
+		quantum         int64 = 2
+	)
+
+	sort.Slice(processes, func(i, j int) bool {
+		return processes[i].ArrivalTime < processes[j].ArrivalTime
+	})
+	for i := 0; i < n; i++ {
+		timeLeft[i] = processes[i].burstTime
+		ArrivalTime[i] = processes[i].ArrivalTime
+	}
+
+	for {
+		Done := true
+
+		for i := 0; i < n; i++ {
+			if timeLeft[i] > 0 {
+				Done = false
+				if timeLeft[i] > quantum {
+
+					currentTime += quantum
+					timeLeft[i] -= quantum
+				} else {
+					currentTime += timeLeft[i]
+					turnAroundTIme[i] = currentTime - ArrivalTime[i]
+					timeLeft[i] = 0
+				}
+			}
+		}
+		if Done {
+			break
+		}
+	}
+
+	for i := 0; i < n; i++ {
+		waitingTime[i] = turnAroundTIme[i] - processes[i].burstTime
+		totalTurnaround += turnAroundTIme[i]
+		totalWaiting += waitingTime[i]
+
+		schedule[i] = []string{
+			fmt.Sprint(processes[i].ProcessID),
+			fmt.Sprint(processes[i].Priority),
+			fmt.Sprint(processes[i].burstTime),
+			fmt.Sprint(processes[i].ArrivalTime),
+			fmt.Sprint(waitingTime[i]),
+			fmt.Sprint(turnAroundTIme[i]),
+		}
+	}
+
+	avgTurnaround := float64(totalTurnaround) / float64(n)
+	avgWaiting := float64(totalWaiting) / float64(n)
+	throughput := float64(n) / float64(currentTime)
+
+	outputTitle(w, title)
+	outputSchedule(w, schedule, avgWaiting, avgTurnaround, throughput)
+}
 
 //endregion
 
